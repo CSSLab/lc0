@@ -108,7 +108,7 @@ class Search {
   static const char* kOutOfOrderEvalStr;
   static const char* kMultiPvStr;
 
-  static const char* randomSearchAlphaStr;
+  static const char* pNormalizerStr;
 
  private:
   // Returns the best move, maybe with temperature (according to the settings).
@@ -203,7 +203,7 @@ class Search {
   const bool kOutOfOrderEval;
 
 
-  const float randomSearchAlpha;
+  const float pNormalizer;
 
   const int kMultiPv;
 

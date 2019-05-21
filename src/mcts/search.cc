@@ -62,7 +62,7 @@ const char* Search::kAllowedNodeCollisionsStr =
 const char* Search::kOutOfOrderEvalStr = "Out-of-order cache backpropagation";
 const char* Search::kMultiPvStr = "MultiPV";
 
-const char* Search::randomSearchAlphaStr= "Random search ratio";
+const char* Search::pNormalizerStr= "normalizing applied to P";
 
 namespace {
 const int kSmartPruningToleranceNodes = 300;
@@ -95,8 +95,8 @@ void Search::PopulateUciParams(OptionsParser* options) {
   options->Add<FloatOption>(kPolicySoftmaxTempStr, 0.1f, 10.0f,
                             "policy-softmax-temp") = 1.0f;
 
-  options->Add<FloatOption>(randomSearchAlphaStr, 0.0f, 1.0f,
-                            "randomness-alpha") = 0.0f;
+  options->Add<FloatOption>(pNormalizerStr, 0.0f, 1.0f,
+                            "p-norm") = 0.0f;
 
   options->Add<IntOption>(kAllowedNodeCollisionsStr, 0, 1024,
                           "allowed-node-collisions") = 0;
@@ -134,7 +134,7 @@ Search::Search(const NodeTree& tree, Network* network,
       kAllowedNodeCollisions(options.Get<int>(kAllowedNodeCollisionsStr)),
       kOutOfOrderEval(options.Get<bool>(kOutOfOrderEvalStr)),
 
-      randomSearchAlpha(options.Get<float>(randomSearchAlphaStr)),
+      pNormalizer(options.Get<float>(pNormalizerStr)),
 
       kMultiPv(options.Get<int>(kMultiPvStr)) {}
 
@@ -157,6 +157,20 @@ void ApplyDirichletNoise(Node* node, float eps, double alpha) {
     edge->SetP(edge->GetP() * (1 - eps) + eps * noise[noise_idx++] / total);
   }
 }
+
+void ApplyPFlattening(Node* node, float alpha) {
+  float total = 0.0;
+  for (const auto& child : node->Edges()) {
+      auto* edge = child.edge();
+      edge->SetP(edge->GetP() * (1 - alpha) + alpha);
+      total += edge->GetP();
+  }
+  if (total > 0.0f) {
+      float scale = 1.0f / total;
+      for (auto edge : node->Edges()) edge.edge()->SetP(edge.GetP() * scale);
+  }
+}
+
 }  // namespace
 
 void Search::SendUciInfo() REQUIRES(nodes_mutex_) {
@@ -284,8 +298,8 @@ void Search::SendMovesStats() const {
     oss << ") ";
 
 
-    oss << "(alpha: " << std::setw(8) << std::setprecision(5)
-        << randomSearchAlpha << ") ";
+    oss << "(Pnormer: " << std::setw(8) << std::setprecision(5)
+        << pNormalizer << ") ";
 
     if (edge.IsTerminal()) oss << "(T) ";
 
@@ -1065,6 +1079,11 @@ void SearchWorker::FetchSingleNodeResult(NodeToProcess* node_to_process,
   if (search_->kNoise && node == search_->root_node_) {
     ApplyDirichletNoise(node, 0.25, 0.3);
   }
+  // shrink pValues if alpha is above 0
+  if (search_->pNormalizer > 0.01f) {
+    ApplyPFlattening(node, search_->pNormalizer);
+  }
+
 }
 
 // 6. Propagate the new nodes' information to all their parents in the tree.
