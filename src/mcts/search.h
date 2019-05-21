@@ -108,6 +108,8 @@ class Search {
   static const char* kOutOfOrderEvalStr;
   static const char* kMultiPvStr;
 
+  static const char* randomSearchAlphaStr;
+
  private:
   // Returns the best move, maybe with temperature (according to the settings).
   std::pair<Move, Move> GetBestMoveInternal() const;
@@ -199,6 +201,10 @@ class Search {
   const float kPolicySoftmaxTemp;
   const int kAllowedNodeCollisions;
   const bool kOutOfOrderEval;
+
+
+  const float randomSearchAlpha;
+
   const int kMultiPv;
 
   friend class SearchWorker;

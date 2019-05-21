@@ -62,6 +62,8 @@ const char* Search::kAllowedNodeCollisionsStr =
 const char* Search::kOutOfOrderEvalStr = "Out-of-order cache backpropagation";
 const char* Search::kMultiPvStr = "MultiPV";
 
+const char* Search::randomSearchAlphaStr= "Random search ratio";
+
 namespace {
 const int kSmartPruningToleranceNodes = 300;
 const int kSmartPruningToleranceMs = 200;
@@ -92,6 +94,10 @@ void Search::PopulateUciParams(OptionsParser* options) {
                           "cache-history-length") = 7;
   options->Add<FloatOption>(kPolicySoftmaxTempStr, 0.1f, 10.0f,
                             "policy-softmax-temp") = 1.0f;
+
+  options->Add<FloatOption>(randomSearchAlphaStr, 0.0f, 1.0f,
+                            "randomness-alpha") = 0.0f;
+
   options->Add<IntOption>(kAllowedNodeCollisionsStr, 0, 1024,
                           "allowed-node-collisions") = 0;
   options->Add<BoolOption>(kOutOfOrderEvalStr, "out-of-order-eval") = false;
@@ -127,6 +133,9 @@ Search::Search(const NodeTree& tree, Network* network,
       kPolicySoftmaxTemp(options.Get<float>(kPolicySoftmaxTempStr)),
       kAllowedNodeCollisions(options.Get<int>(kAllowedNodeCollisionsStr)),
       kOutOfOrderEval(options.Get<bool>(kOutOfOrderEvalStr)),
+
+      randomSearchAlpha(options.Get<float>(randomSearchAlphaStr)),
+
       kMultiPv(options.Get<int>(kMultiPvStr)) {}
 
 namespace {
@@ -273,6 +282,10 @@ void Search::SendMovesStats() const {
       oss << " -.----";
     }
     oss << ") ";
+
+
+    oss << "(alpha: " << std::setw(8) << std::setprecision(5)
+        << randomSearchAlpha << ") ";
 
     if (edge.IsTerminal()) oss << "(T) ";
 
