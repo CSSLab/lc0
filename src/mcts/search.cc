@@ -826,7 +826,7 @@ SearchWorker::NodeToProcess SearchWorker::PickNodeToExtend() {
         ++possible_moves;
       }
       float Q = child.GetQ(parent_q);
-      float score= child.GetU(puct_mult) + Q;
+      float score = child.GetU(puct_mult) + Q;
       if (search_->searchRandomizer > 0.01f) {
           float noise = Random::Get().GetFloat(search_->searchRandomizer * 2) - search_->searchRandomizer;
           score = score * (1 - search_->searchRandomizer) + noise;
