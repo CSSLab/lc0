@@ -63,6 +63,7 @@ const char* Search::kOutOfOrderEvalStr = "Out-of-order cache backpropagation";
 const char* Search::kMultiPvStr = "MultiPV";
 
 const char* Search::pNormalizerStr= "normalizing applied to P";
+const char* Search::searchRandomizerStr= "randomess of search";
 
 namespace {
 const int kSmartPruningToleranceNodes = 300;
@@ -97,6 +98,8 @@ void Search::PopulateUciParams(OptionsParser* options) {
 
   options->Add<FloatOption>(pNormalizerStr, 0.0f, 1.0f,
                             "p-norm") = 0.0f;
+  options->Add<FloatOption>(searchRandomizerStr, 0.0f, 1.0f,
+                            "search-randomess") = 0.0f;
 
   options->Add<IntOption>(kAllowedNodeCollisionsStr, 0, 1024,
                           "allowed-node-collisions") = 0;
@@ -135,6 +138,7 @@ Search::Search(const NodeTree& tree, Network* network,
       kOutOfOrderEval(options.Get<bool>(kOutOfOrderEvalStr)),
 
       pNormalizer(options.Get<float>(pNormalizerStr)),
+      searchRandomizer(options.Get<float>(searchRandomizerStr)),
 
       kMultiPv(options.Get<int>(kMultiPvStr)) {}
 
@@ -298,8 +302,10 @@ void Search::SendMovesStats() const {
     oss << ") ";
 
 
-    oss << "(Pnormer: " << std::setw(8) << std::setprecision(5)
+    oss << "(Pnorm: " << std::setw(8) << std::setprecision(3)
         << pNormalizer << ") ";
+    oss << "(Srand: " << std::setw(8) << std::setprecision(3)
+        << searchRandomizer << ") ";
 
     if (edge.IsTerminal()) oss << "(T) ";
 
@@ -820,11 +826,16 @@ SearchWorker::NodeToProcess SearchWorker::PickNodeToExtend() {
         ++possible_moves;
       }
       float Q = child.GetQ(parent_q);
-      const float score = child.GetU(puct_mult) + Q;
+      float score= child.GetU(puct_mult) + Q;
+      if (search_->searchRandomizer > 0.01f) {
+          float noise = Random::Get().GetFloat(search_->searchRandomizer * 2) - search_->searchRandomizer;
+          score = score * (1 - search_->searchRandomizer) + noise;
+      }
       if (score > best) {
         best = score;
         best_edge = child;
       }
+
     }
 
     history_.Append(best_edge.GetMove());
