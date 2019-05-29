@@ -109,8 +109,11 @@ class Search {
   static const char* kMultiPvStr;
 
   static const char* pNormalizerStr;
+  static const char* qNormalizerStr;
   static const char* searchRandomizerStr;
+  static const char* maxQmovesStr;
 
+  //New engine option
  private:
   // Returns the best move, maybe with temperature (according to the settings).
   std::pair<Move, Move> GetBestMoveInternal() const;
@@ -204,8 +207,10 @@ class Search {
   const bool kOutOfOrderEval;
 
   const float pNormalizer;
+  const float qNormalizer;
   const float searchRandomizer;
-
+  const bool maxQmoves;
+  //New engine option
   const int kMultiPv;
 
   friend class SearchWorker;

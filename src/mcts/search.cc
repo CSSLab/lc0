@@ -62,8 +62,12 @@ const char* Search::kAllowedNodeCollisionsStr =
 const char* Search::kOutOfOrderEvalStr = "Out-of-order cache backpropagation";
 const char* Search::kMultiPvStr = "MultiPV";
 
-const char* Search::pNormalizerStr= "normalizing applied to P";
-const char* Search::searchRandomizerStr= "randomess of search";
+const char* Search::pNormalizerStr= "\u001b[32m*haibrid* normalizing applied to P\u001b[0m";
+const char* Search::qNormalizerStr= "\u001b[32m*haibrid* normalizing applied to Q\u001b[0m";
+const char* Search::searchRandomizerStr= "\u001b[32m*haibrid* randomess of search\u001b[0m";
+const char* Search::maxQmovesStr= "\u001b[32m*haibrid* pick next moves that maximize Q\u001b[0m";
+
+//New engine option
 
 namespace {
 const int kSmartPruningToleranceNodes = 300;
@@ -96,10 +100,12 @@ void Search::PopulateUciParams(OptionsParser* options) {
   options->Add<FloatOption>(kPolicySoftmaxTempStr, 0.1f, 10.0f,
                             "policy-softmax-temp") = 1.0f;
 
-  options->Add<FloatOption>(pNormalizerStr, 0.0f, 1.0f,
-                            "p-norm") = 0.0f;
-  options->Add<FloatOption>(searchRandomizerStr, 0.0f, 1.0f,
-                            "search-randomess") = 0.0f;
+  options->Add<FloatOption>(pNormalizerStr, 0.0f, 1.0f, "p-norm") = 0.0f;
+  options->Add<FloatOption>(qNormalizerStr, 0.0f, 1.0f, "q-norm") = 0.0f;
+  options->Add<FloatOption>(searchRandomizerStr, 0.0f, 1.0f, "search-randomess") = 0.0f;
+  options->Add<BoolOption>(maxQmovesStr, "max-q-moves") = false;
+  //New engine option
+
 
   options->Add<IntOption>(kAllowedNodeCollisionsStr, 0, 1024,
                           "allowed-node-collisions") = 0;
@@ -138,7 +144,11 @@ Search::Search(const NodeTree& tree, Network* network,
       kOutOfOrderEval(options.Get<bool>(kOutOfOrderEvalStr)),
 
       pNormalizer(options.Get<float>(pNormalizerStr)),
+      qNormalizer(options.Get<float>(qNormalizerStr)),
       searchRandomizer(options.Get<float>(searchRandomizerStr)),
+      maxQmoves(options.Get<bool>(maxQmovesStr)),
+
+     //New engine option
 
       kMultiPv(options.Get<int>(kMultiPvStr)) {}
 
@@ -491,7 +501,11 @@ std::vector<EdgeAndNode> Search::GetBestChildrenNoTemperature(Node* parent,
             root_limit.end()) {
       continue;
     }
-    edges.emplace_back(edge.GetN(), edge.GetQ(0), edge.GetP(), edge);
+    if (maxQmoves) {
+        edges.emplace_back(edge.GetN() ? 1 : 0, edge.GetQ(0), edge.GetP(), edge);
+    } else {
+        edges.emplace_back(edge.GetN(), edge.GetQ(0), edge.GetP(), edge);
+    }
   }
   auto middle = (static_cast<int>(edges.size()) > count) ? edges.begin() + count
                                                          : edges.end();
@@ -1122,6 +1136,12 @@ void SearchWorker::DoBackupUpdateSingleNode(
 
   // Backup V value up to a root. After 1 visit, V = Q.
   float v = node_to_process.v;
+
+  // Pushign v to 0 pushes Q there too
+  if (search_->qNormalizer > 0.01f) {
+    v = v * (1 - search_->qNormalizer);
+  }
+
   for (Node* n = node; n != search_->root_node_->GetParent();
        n = n->GetParent()) {
     n->FinalizeScoreUpdate(v);
