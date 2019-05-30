@@ -112,6 +112,7 @@ class Search {
   static const char* qNormalizerStr;
   static const char* searchRandomizerStr;
   static const char* maxQmovesStr;
+  static const char*  useShallowQStr;
 
   //New engine option
  private:
@@ -210,6 +211,8 @@ class Search {
   const float qNormalizer;
   const float searchRandomizer;
   const bool maxQmoves;
+  const bool useShallowQ;
+
   //New engine option
   const int kMultiPv;
 

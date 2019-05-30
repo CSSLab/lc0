@@ -250,6 +250,19 @@ Node::NodeRange Node::ChildNodes() const { return child_.get(); }
 
 void Node::ReleaseChildren() { gNodeGc.AddToGcQueue(std::move(child_)); }
 
+float Node::GetShallowQ() {
+    if (!child_) {
+        return q_;
+    }
+    float retQ = q_;
+    int siblings_count = 0;
+    for (std::unique_ptr<Node>* node = &child_; *node;  node = &(*node)->sibling_) {
+        siblings_count += 1;
+        retQ += node->get()->GetShallowQ();
+    }
+    return retQ / siblings_count;
+}
+
 void Node::ReleaseChildrenExceptOne(Node* node_to_save) {
   // Stores node which will have to survive (or nullptr if it's not found).
   std::unique_ptr<Node> saved_node;

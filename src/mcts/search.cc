@@ -66,6 +66,10 @@ const char* Search::pNormalizerStr= "\u001b[32m*haibrid* normalizing applied to 
 const char* Search::qNormalizerStr= "\u001b[32m*haibrid* normalizing applied to Q\u001b[0m";
 const char* Search::searchRandomizerStr= "\u001b[32m*haibrid* randomess of search\u001b[0m";
 const char* Search::maxQmovesStr= "\u001b[32m*haibrid* pick next moves that maximize Q\u001b[0m";
+const char* Search::useShallowQStr= "\u001b[32m*haibrid* pick next moves that maximize Q, using a shallow Q\u001b[0m";
+
+
+
 
 //New engine option
 
@@ -104,6 +108,8 @@ void Search::PopulateUciParams(OptionsParser* options) {
   options->Add<FloatOption>(qNormalizerStr, 0.0f, 1.0f, "q-norm") = 0.0f;
   options->Add<FloatOption>(searchRandomizerStr, 0.0f, 1.0f, "search-randomess") = 0.0f;
   options->Add<BoolOption>(maxQmovesStr, "max-q-moves") = false;
+  options->Add<BoolOption>(useShallowQStr, "shallow-q") = false;
+
   //New engine option
 
 
@@ -147,6 +153,7 @@ Search::Search(const NodeTree& tree, Network* network,
       qNormalizer(options.Get<float>(qNormalizerStr)),
       searchRandomizer(options.Get<float>(searchRandomizerStr)),
       maxQmoves(options.Get<bool>(maxQmovesStr)),
+      useShallowQ(options.Get<bool>(useShallowQStr)),
 
      //New engine option
 
@@ -503,6 +510,8 @@ std::vector<EdgeAndNode> Search::GetBestChildrenNoTemperature(Node* parent,
     }
     if (maxQmoves) {
         edges.emplace_back(edge.GetN() ? 1 : 0, edge.GetQ(0), edge.GetP(), edge);
+    } else if (useShallowQ) {
+        edges.emplace_back(edge.GetN() ? 1 : 0, edge.GetShallowQ(0), edge.GetP(), edge);
     } else {
         edges.emplace_back(edge.GetN(), edge.GetQ(0), edge.GetP(), edge);
     }

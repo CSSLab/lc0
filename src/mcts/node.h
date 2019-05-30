@@ -153,6 +153,9 @@ class Node {
   // for terminal nodes.
   float GetQ() const { return q_; }
 
+  //For the 'shallow' tree search
+  float GetShallowQ();
+
   // Returns whether the node is known to be draw/lose/win.
   bool IsTerminal() const { return is_terminal_; }
   uint16_t GetNumEdges() const { return edges_.size(); }
@@ -295,6 +298,11 @@ class EdgeAndNode {
   uint32_t GetN() const { return node_ ? node_->GetN() : 0; }
   int GetNStarted() const { return node_ ? node_->GetNStarted() : 0; }
   uint32_t GetNInFlight() const { return node_ ? node_->GetNInFlight() : 0; }
+
+  //For shallow rollback
+  float GetShallowQ(float default_q) const {
+    return (node_ && node_->GetN() > 0) ? node_->GetShallowQ() : default_q;
+  }
 
   // Whether the node is known to be terminal.
   bool IsTerminal() const { return node_ ? node_->IsTerminal() : false; }
